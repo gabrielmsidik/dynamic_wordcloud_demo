@@ -50,8 +50,215 @@ function update_word_cloud() {
 
 function centralizeWordRectangles(input_word_rectangles, canvas) {
 
-    let output_word_rectangles = centrify(input_word_rectangles, canvas)
+    let squeezed_word_rectangles = Object.assign([], input_word_rectangles);
+
+    for (let current_word_rectangle of squeezed_word_rectangles) {
+
+        // NOTE: shift_towards_center is a destructive method
+        shift_towards_center(current_word_rectangle, squeezed_word_rectangles, canvas)
+    }
+
+    // let output_word_rectangles = squeezed_word_rectangles;
+    let output_word_rectangles = centrify(squeezed_word_rectangles, canvas);
     return output_word_rectangles
+}
+
+// NOTE: shift_towards_center is a destructive method
+function shift_towards_center(current_word_rectangle, input_word_rectangles, canvas) {
+
+    const threshold = 10;
+
+    let canShiftX = true;
+    let canShiftY = true;
+
+    const canvas_mid_x = canvas.width / 2;
+    const canvas_mid_y = canvas.height / 2;
+
+    let x_component_to_center = canvas_mid_x - current_word_rectangle.mid_x;
+    let y_component_to_center = canvas_mid_y - current_word_rectangle.mid_y;
+
+    let move_right = false;
+    let move_left = false;
+    let move_up = false;
+    let move_down = false;
+
+    if (x_component_to_center < 0) {
+        move_left = true;
+    }
+
+    if (x_component_to_center > 0) {
+        move_right = true;
+    }
+
+    if (y_component_to_center < 0) {
+        move_up = true;
+    }
+
+    if (y_component_to_center > 0) {
+        move_down = true;
+    }
+
+    console.log("In shift towards center for: ", current_word_rectangle.word);
+    console.log("current word position");
+    console.log(current_word_rectangle.mid_x , current_word_rectangle.mid_y);
+    console.log("canvas center position");
+    console.log(canvas_mid_x, canvas_mid_y);
+    console.log("move_right: " + move_right);
+    console.log("move_left: " + move_left);
+    console.log("move_up: " + move_up);
+    console.log("move_down: " + move_down);
+
+    let counter = 0;
+    const limit = canvas.width + canvas.height;
+
+    while ((canShiftX || canShiftY) && counter < limit) {
+
+        counter += 1
+
+        canShiftX = true;
+        canShiftY = true;
+
+        let x_component_to_center = canvas_mid_x - current_word_rectangle.mid_x;
+        let y_component_to_center = canvas_mid_y - current_word_rectangle.mid_y;
+
+        let move_right = false;
+        let move_left = false;
+        let move_up = false;
+        let move_down = false;
+
+        if (x_component_to_center < -threshold) {
+            move_left = true;
+        }
+
+        if (x_component_to_center > threshold) {
+            move_right = true;
+        }
+
+        if (y_component_to_center < -threshold) {
+            move_up = true;
+        }
+
+        if (y_component_to_center > threshold) {
+            move_down = true;
+        }
+
+        if (canShiftX && move_left) {
+
+            // console.log("canShiftX && move_left")
+
+            let test_word_rectangle = Object.assign(
+                Object.create(current_word_rectangle), current_word_rectangle
+            );
+
+            test_word_rectangle.move(-1, 0);
+
+            for (let word_rectangle of input_word_rectangles) {
+                if (word_rectangle.word !== test_word_rectangle.word) {
+                    if (isOverlapping(word_rectangle, test_word_rectangle)) {
+                        
+                        console.log("setting canShiftX to false");
+                        canShiftX = false;
+                    }
+                }
+            }
+
+            if (canShiftX) {
+                current_word_rectangle.move(-1, 0);
+            }
+        } else if (canShiftX && move_right) {
+
+            // console.log("canShiftX && move_right")
+
+            let test_word_rectangle = Object.assign(
+                Object.create(current_word_rectangle), current_word_rectangle
+            );
+
+            test_word_rectangle.move(1, 0);
+
+            for (let word_rectangle of input_word_rectangles) {
+                if (word_rectangle.word !== test_word_rectangle.word) {
+                    if (isOverlapping(word_rectangle, test_word_rectangle)) {
+                        // console.log("setting canShiftX to false");
+                        canShiftX = false;
+                    }
+                }
+            }
+
+            if (canShiftX) {
+                current_word_rectangle.move(1, 0);
+            }
+        } else {
+
+            // console.log("cannot shift X anymore")
+            canShiftX = false;
+        }
+
+        if (canShiftY && move_down) {
+
+            // console.log("canShiftY && move_down")
+
+            let test_word_rectangle = Object.assign(
+                Object.create(current_word_rectangle), current_word_rectangle
+            );
+
+            test_word_rectangle.move(0, 1);
+
+            for (let word_rectangle of input_word_rectangles) {
+                if (word_rectangle.word !== test_word_rectangle.word) {
+                    if (isOverlapping(word_rectangle, test_word_rectangle)) {
+                        // console.log("setting canShiftY to false");
+                        canShiftY = false;
+                    }
+                }
+            }
+
+            if (canShiftY) {
+                current_word_rectangle.move(0, 1);
+            }
+        } else if (canShiftY && move_up) {
+
+            // console.log("canShiftY && move_up")
+
+            let test_word_rectangle = Object.assign(
+                Object.create(current_word_rectangle), current_word_rectangle
+            );
+
+            test_word_rectangle.move(0, -1);
+
+            for (let word_rectangle of input_word_rectangles) {
+                if (word_rectangle.word !== test_word_rectangle.word) {
+                    if (isOverlapping(word_rectangle, test_word_rectangle)) {
+                        // console.log("setting canShiftY to false");
+                        canShiftY = false;
+                    }
+                }
+            }
+
+            if (canShiftY) {
+                current_word_rectangle.move(0, -1);
+            }
+        } else {
+
+            // console.log("cannot shift Y anymore")
+            canShiftY = false;
+        }
+    }
+
+    
+    console.log("END OF shift towards center for: ", current_word_rectangle.word);
+    console.log("new word position");
+    console.log(current_word_rectangle.mid_x , current_word_rectangle.mid_y);
+    console.log("canvas center position");
+    console.log(canvas_mid_x, canvas_mid_y);
+    console.log("move_right: " + move_right);
+    console.log("move_left: " + move_left);
+    console.log("move_up: " + move_up);
+    console.log("move_down: " + move_down);
+
+
+    if (counter === limit) {
+        console.log("terminated by counter")
+    }
 }
 
 function centrify(input_word_rectangles, canvas) {
@@ -203,7 +410,7 @@ class WordRectangle {
     }
 
     incrementSize() {
-        this.height = Math.ceil(this.height * 1.2);
+        this.height = Math.ceil(this.height * 1.5);
     }
 
     decrementSize() {
