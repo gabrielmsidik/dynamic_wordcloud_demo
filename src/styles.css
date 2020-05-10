@@ -1,0 +1,29 @@
+body {
+    background-color: azure;
+    font-family: 'Segoe UI';
+    text-align: center;
+    font-weight: lighter;
+}
+
+h1 {
+    color: rgb(2, 2, 65);
+    font-weight: lighter;
+    font-size: xxx-large;
+}
+
+h2 {
+    font-weight: lighter;
+}
+
+button {
+    font-family: 'Segoe UI';
+}
+
+div {
+    margin: 1%;
+}
+
+canvas {
+    border: solid;
+    border-width: 1px;
+}
