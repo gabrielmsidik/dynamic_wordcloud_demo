@@ -7,9 +7,10 @@ let canvas = document.getElementById("word_cloud_canvas");
 let ctx = canvas.getContext("2d");
 
 let word_rectangles = [];
+let input_queue = [];
 
 const button = document.querySelector('button');
-button.addEventListener('click', update_word_cloud);
+button.addEventListener('click', parse_input);
 const input_text_element = document.getElementById("input_text");
 
 input_text_element.addEventListener("keyup", function (event) {
@@ -20,17 +21,46 @@ input_text_element.addEventListener("keyup", function (event) {
 
 });
 
-function update_word_cloud() {
+function check_min_size(word_rect) {
+    return word_rect.height > 10;
+}
+
+function sleep(milliseconds) {
+    return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
+
+async function parse_input() {
 
     let input_text = input_text_element.value;
     document.getElementById("input_text").value = "";
+
     
     if (isInvalidText(input_text)) {
         return;
     }
 
+    let punctuation_removed = input_text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
+    
+    let input_list = punctuation_removed.split(" ")
+    input_queue = input_queue.concat(input_list);
+
+    console.log(input_queue);
+
+    while (input_queue.length != 0) {
+
+        let next_word = input_queue.shift();
+        console.log(next_word)
+        update_word_cloud(next_word);
+        await sleep(1000);
+    }
+
+}
+
+function update_word_cloud(input_text) {
+
     word_rectangles = decomposeExistingWords(word_rectangles);
 
+    word_rectangles = word_rectangles.filter(check_min_size);
 
     word_rectangles = addWord(word_rectangles, input_text);
 
@@ -59,7 +89,6 @@ function deOverlapWordRectangles(input_word_rectangles) {
                 if (word_rect1.word !== word_rect2.word && isOverlapping(word_rect1, word_rect2)){
 
                     overlappingExist = true;
-                    console.log("overlapping exists")
 
                     // NOTE: pushApart is a destructive method
                     pushApart(word_rect1, word_rect2);
@@ -270,16 +299,19 @@ function centrify(input_word_rectangles, canvas) {
 
     let output_word_rectangles = []
 
-    let total_x = 0;
-    let total_y = 0;
+    let total_weighted_x = 0;
+    let total_weighted_y = 0;
+
+    let total_weight = 0;
 
     for (let word_rect of input_word_rectangles) {
-        total_x += word_rect.mid_x;
-        total_y += word_rect.mid_y;
+        total_weighted_x += word_rect.mid_x * word_rect.height;
+        total_weighted_y += word_rect.mid_y * word_rect.height;
+        total_weight += word_rect.height;
     }
 
-    let average_x = total_x / input_word_rectangles.length;
-    let average_y = total_y / input_word_rectangles.length;
+    let average_x = total_weighted_x / total_weight;
+    let average_y = total_weighted_y / total_weight;
 
     let delta_x = average_x - canvas.width / 2;
     let delta_y = average_y - canvas.height / 2;
@@ -415,7 +447,7 @@ class WordRectangle {
     }
 
     incrementSize() {
-        this.height = this.height + 5;
+        this.height = this.height + 15;
     }
 
     decrementSize() {
@@ -456,7 +488,7 @@ class WordRectangle {
     }
 
     draw() {
-        this.getRectangle().draw();
+        // this.getRectangle().draw();
         this.getWordObject().draw();
     }
 
