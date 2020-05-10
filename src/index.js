@@ -1,4 +1,5 @@
 import "./styles.css";
+import { isOverlapping } from "./utils/index";
 
 const ENTER_KEY_CODE = 13
 
@@ -29,33 +30,153 @@ function update_word_cloud() {
     let input_text = input_text_element.value;
     document.getElementById("input_text").value = "";
     
-    if (input_text === "") {
+    if (isInvalidText(input_text)) {
         return;
     }
-    
-    for (let word_rect of word_rectangles) {
 
+    word_rectangles = decomposeExistingWords(word_rectangles);
+
+    // CASE (B): word is already in the word cloud
+    // CASE (C): new word to be added
+
+    word_rectangles = addWord(word_rectangles, input_text);
+
+    // STEP #2: centralize Wordcloud such that it's more of a cloud and less of a random space
+    // TODO!
+    word_rectangles = centralizeWordRectangles(word_rectangles, canvas);
+
+    display();
+}
+
+function centralizeWordRectangles(input_word_rectangles, canvas) {
+
+    let output_word_rectangles = centrify(input_word_rectangles, canvas)
+    return output_word_rectangles
+}
+
+function centrify(input_word_rectangles, canvas) {
+
+    let output_word_rectangles = []
+
+    let total_x = 0;
+    let total_y = 0;
+
+    for (let word_rect of input_word_rectangles) {
+        total_x += word_rect.mid_x;
+        total_y += word_rect.mid_y;
+    }
+
+    let average_x = total_x / input_word_rectangles.length;
+    let average_y = total_y / input_word_rectangles.length;
+
+    let delta_x = average_x - canvas.width / 2;
+    let delta_y = average_y - canvas.height / 2;
+
+    for (let word_rect of input_word_rectangles) {
+
+        let new_word_rect = Object.assign(Object.create(word_rect), word_rect);
+        new_word_rect.move(-delta_x, -delta_y);
+        output_word_rectangles.push(new_word_rect);
+    }
+
+    return output_word_rectangles;
+}
+
+function isInvalidText(input_text) {
+    return input_text == "";
+}
+
+function addWord(input_word_rectangles, input_text) {
+
+    let output_word_rectangles;
+
+    let isNewWord = !checkIfWordExist(input_word_rectangles, input_text);
+
+    if (isNewWord) {
+        output_word_rectangles = addNonOverlappingWord(input_word_rectangles, input_text);
+    } else {
+        output_word_rectangles = incrementExistingWord(input_word_rectangles, input_text);
+    }
+
+    return output_word_rectangles;
+}
+
+function incrementExistingWord(input_word_rectangles, input_text) {
+
+    let output_word_rectangles = [];
+
+    for (let word_rect of input_word_rectangles) {
+
+        let new_word_rect = Object.assign(Object.create(word_rect), word_rect);
+        
+        if (new_word_rect.word == input_text) {
+            new_word_rect.incrementSize();
+        }
+
+        output_word_rectangles.push(new_word_rect);
+    }
+
+    return output_word_rectangles;
+} 
+
+function decomposeExistingWords(input_word_rectangles) {
+
+    let output_word_rectangles = [];
+
+    for (let word_rect of input_word_rectangles) {
+
+        let decomposed_word_rect = Object.assign(
+            Object.create(word_rect), word_rect
+        );
+        decomposed_word_rect.decrementSize();
+        output_word_rectangles.push(decomposed_word_rect);
+
+    }
+
+    return output_word_rectangles;
+
+}
+
+function checkIfWordExist(input_word_rectangles, input_text) {
+
+    for (let word_rect of input_word_rectangles) {
         if (word_rect.word == input_text) {
-            word_rect.incrementSize();
-            display();
-            return;
-        } else {
-            word_rect.decrementSize();
+            return true;
         }
     }
 
-    let margin = 0.2
+    return false;
+}
 
-    let mid_x = ((1 - 2 * margin) * Math.random() + margin) * canvas.width;
-    let mid_y = ((1 - 2 * margin) * Math.random() + margin) * canvas.height;
-    const height = 30;
+function addNonOverlappingWord(input_word_rectangles, input_text) {
 
+    let output_word_rectangles = Object.assign([], input_word_rectangles);
 
-    word_rectangles.push(
-        new WordRectangle(input_text, mid_x, mid_y, height)
-    );
+    let newWordRect;
+    let overlappingCurrentWords = true;
 
-    display();
+    while (overlappingCurrentWords) {
+
+        let margin = 0.2
+    
+        let mid_x = ((1 - 2 * margin) * Math.random() + margin) * canvas.width;
+        let mid_y = ((1 - 2 * margin) * Math.random() + margin) * canvas.height;
+        const height = 30;
+
+        overlappingCurrentWords = false;
+
+        newWordRect = new WordRectangle(input_text, mid_x, mid_y, height)
+
+        for (let wordRect of output_word_rectangles) {
+            if (isOverlapping(newWordRect, wordRect)) {
+                overlappingCurrentWords = true;
+            } 
+        }
+    }
+
+    output_word_rectangles.push(newWordRect);
+
+    return output_word_rectangles;
 }
 
 function display() {
@@ -76,12 +197,17 @@ class WordRectangle {
 
     }
 
+    move(x_shift, y_shift) {
+        this.mid_x = this.mid_x + x_shift;
+        this.mid_y = this.mid_y + y_shift;
+    }
+
     incrementSize() {
         this.height = Math.ceil(this.height * 1.2);
     }
 
     decrementSize() {
-        this.height = Math.floor(this.height * 0.95);
+        this.height = this.height - 1;
     }
 
     getLength() {
