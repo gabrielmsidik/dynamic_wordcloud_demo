@@ -34,7 +34,6 @@ async function parse_input() {
     let input_text = input_text_element.value;
     document.getElementById("input_text").value = "";
 
-    
     if (isInvalidText(input_text)) {
         return;
     }
@@ -44,14 +43,11 @@ async function parse_input() {
     let input_list = punctuation_removed.split(" ")
     input_queue = input_queue.concat(input_list);
 
-    console.log(input_queue);
-
     while (input_queue.length != 0) {
 
         let next_word = input_queue.shift();
-        console.log(next_word)
-        update_word_cloud(next_word);
-        await sleep(1000);
+        update_word_cloud(next_word.toLowerCase());
+        await sleep(50);
     }
 
 }
@@ -354,7 +350,7 @@ function incrementExistingWord(input_word_rectangles, input_text) {
         let new_word_rect = Object.assign(Object.create(word_rect), word_rect);
         
         if (new_word_rect.word == input_text) {
-            new_word_rect.incrementSize();
+            new_word_rect.incrementSize(Math.floor(canvas.height * 0.1));
         }
 
         output_word_rectangles.push(new_word_rect);
@@ -367,14 +363,29 @@ function decomposeExistingWords(input_word_rectangles) {
 
     let output_word_rectangles = [];
 
-    for (let word_rect of input_word_rectangles) {
+    let weight = input_word_rectangles.reduce((a, b) => a + b.height * b.word.length, 0);
 
-        let decomposed_word_rect = Object.assign(
-            Object.create(word_rect), word_rect
-        );
-        decomposed_word_rect.decrementSize();
-        output_word_rectangles.push(decomposed_word_rect);
+    if (weight > 1000) {
+        for (let word_rect of input_word_rectangles) {
+    
+            let decomposed_word_rect = Object.assign(
+                Object.create(word_rect), word_rect
+            );
 
+            if (decomposed_word_rect.height < 40) {
+                decomposed_word_rect.decrementSize(1);
+            } else {
+
+                // if bigger than 30 decrease by 5%
+                let decrement = Math.floor(decomposed_word_rect.height * 0.05);
+                decomposed_word_rect.decrementSize(decrement);
+
+            }
+            output_word_rectangles.push(decomposed_word_rect);
+    
+        }
+    } else {
+        return input_word_rectangles;
     }
 
     return output_word_rectangles;
@@ -401,11 +412,11 @@ function addNonOverlappingWord(input_word_rectangles, input_text) {
 
     while (overlappingCurrentWords) {
 
-        let margin = 0.2
+        let margin = 0.15
     
         let mid_x = ((1 - 2 * margin) * Math.random() + margin) * canvas.width;
         let mid_y = ((1 - 2 * margin) * Math.random() + margin) * canvas.height;
-        const height = 30;
+        const height = Math.floor(canvas.height * 0.1);
 
         overlappingCurrentWords = false;
 
@@ -446,12 +457,12 @@ class WordRectangle {
         this.mid_y = this.mid_y + y_shift;
     }
 
-    incrementSize() {
-        this.height = this.height + 15;
+    incrementSize(increment_amount) {
+        this.height = this.height + increment_amount;
     }
 
-    decrementSize() {
-        this.height = this.height - 1;
+    decrementSize(decrement_amount) {
+        this.height = this.height - decrement_amount;
     }
 
     getLength() {
