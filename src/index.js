@@ -3,16 +3,6 @@ import { isOverlapping, pickRandom } from "./utils/index";
 
 const ENTER_KEY_CODE = 13
 
-let canvas = document.getElementById("word_cloud_canvas");
-
-let ctx = canvas.getContext("2d");
-
-canvas.width = innerWidth * 0.8;
-canvas.height = innerHeight * 0.7;
-
-let word_rectangles = [];
-let input_queue = [];
-
 let colors = [
     "rgb(91, 94, 166)",
     "rgb(119, 33, 46)",
@@ -21,8 +11,59 @@ let colors = [
     "rgb(149, 82, 81)"
 ]
 
+class DynamicWordCloud{
+
+    constructor(canvas) {
+        
+        this.canvas = canvas;
+        this.context = canvas.getContext("2d");
+        this.word_objects = [];
+
+    }
+
+    update_word_cloud(input_text, input_size) {
+
+        this.word_objects = decomposeExistingWords(this.word_objects);
+        this.word_objects = this.word_objects.filter(check_min_size);
+        this.word_objects = addWord(this.word_objects, input_text, input_size, this.canvas);
+
+        console.log(this.word_objects);
+
+    }
+
+    display() {
+
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        this.word_objects = deOverlapWordRectangles(this.word_objects, this.context);
+
+        this.word_objects = centralizeWordRectangles(this.word_objects, this.canvas);
+
+        for (let wordRect of this.word_objects) {
+            wordRect.draw();
+        }
+    }
+
+    animate() {
+
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.display();
+        requestAnimationFrame(this.animate.bind(this));
+
+    }
+}
+
 const stopwords = ["i","me","my","myself","we","our","ours","ourselves","you","your","yours","yourself","yourselves","he","him","his","himself","she","her","hers","herself","it","its","itself","they","them","their","theirs","themselves","what","which","who","whom","this","that","these","those","am","is","are","was","were","be","been","being","have","has","had","having","do","does","did","doing","a","an","the","and","but","if","or","because","as","until","while","of","at","by","for","with","about","against","between","into","through","during","before","after","above","below","to","from","up","down","in","out","on","off","over","under","again","further","then","once","here","there","when","where","why","how","all","any","both","each","few","more","most","other","some","such","no","nor","not","only","own","same","so"
 ,"than","too","very","s","t","can","will","just","don","should","now"];
+
+let class_canvas = document.getElementById("word_cloud_class_canvas");
+
+class_canvas.width = innerWidth * 0.8;
+class_canvas.height = innerHeight * 0.7;
+
+let dynamicWordCloud = new DynamicWordCloud(class_canvas);
+
+dynamicWordCloud.animate();
 
 const enter_button = document.querySelectorAll('button')[0];
 const clear_button = document.querySelectorAll('button')[1];
@@ -31,6 +72,7 @@ enter_button.addEventListener('click', parse_input);
 clear_button.addEventListener('click', clear_state);
 
 const input_text_element = document.getElementById("input_text");
+let input_queue = [];
 
 input_text_element.addEventListener("keyup", function (event) {
 
@@ -41,7 +83,7 @@ input_text_element.addEventListener("keyup", function (event) {
 });
 
 function clear_state() {
-    word_rectangles = [];
+    dynamicWordCloud.word_objects = [];
     input_queue = [];
     document.getElementById("input_text").value = "";
     display();
@@ -74,11 +116,9 @@ async function parse_input() {
 
         let next_word = input_queue.shift();
         next_word = next_word.toLowerCase();
+        let size = stopwords.includes(next_word) ? dynamicWordCloud.canvas.height * 0.06 : dynamicWordCloud.canvas.height * 0.14;
 
-        let isStopWord = stopwords.includes(next_word);
-
-        let size = stopwords.includes(next_word) ? canvas.height * 0.06 : canvas.height * 0.14;
-        update_word_cloud(next_word, size);
+        dynamicWordCloud.update_word_cloud(next_word, size);
 
         await sleep(200);
     }
@@ -320,14 +360,14 @@ function isInvalidText(input_text) {
     return input_text == "";
 }
 
-function addWord(input_word_rectangles, input_text, text_size) {
+function addWord(input_word_rectangles, input_text, text_size, canvas) {
 
     let output_word_rectangles;
 
     let isNewWord = !checkIfWordExist(input_word_rectangles, input_text);
 
     if (isNewWord) {
-        output_word_rectangles = addNonOverlappingWord(input_word_rectangles, input_text, text_size);
+        output_word_rectangles = addNonOverlappingWord(input_word_rectangles, input_text, text_size, canvas);
     } else {
         output_word_rectangles = incrementExistingWord(input_word_rectangles, input_text, text_size);
     }
@@ -420,7 +460,7 @@ function checkIfWordExist(input_word_rectangles, input_text) {
     return false;
 }
 
-function addNonOverlappingWord(input_word_rectangles, input_text, text_size) {
+function addNonOverlappingWord(input_word_rectangles, input_text, text_size, canvas) {
 
     let output_word_rectangles = Object.assign([], input_word_rectangles);
 
@@ -437,7 +477,7 @@ function addNonOverlappingWord(input_word_rectangles, input_text, text_size) {
 
         overlappingCurrentWords = false;
 
-        newWordRect = new WordRectangle(input_text, mid_x, mid_y, height, pickRandom(colors))
+        newWordRect = new WordRectangle(input_text, mid_x, mid_y, height, pickRandom(colors), canvas)
 
         for (let wordRect of output_word_rectangles) {
             if (isOverlapping(newWordRect, wordRect)) {
@@ -463,7 +503,7 @@ function display() {
 
 class WordRectangle {
 
-    constructor(word, mid_x, mid_y, height, color) {
+    constructor(word, mid_x, mid_y, height, color, canvas) {
 
         this.word = word;
         this.mid_x = mid_x;
@@ -473,6 +513,7 @@ class WordRectangle {
         this.loop_stage = 0;
         this.loop = 5;
         this.color = color;
+        this.canvas = canvas;
 
     }
 
@@ -517,7 +558,7 @@ class WordRectangle {
 
     getWordObject() {
         return new Word(
-            this.word, this.get_x1(), this.get_y1(), this.get_x2(), this.get_y2(), this.color
+            this.word, this.get_x1(), this.get_y1(), this.get_x2(), this.get_y2(), this.color, this.canvas
         )
     }
 
@@ -561,7 +602,7 @@ class Rectangle {
 
 class Word {
 
-    constructor(word, x1, y1, x2, y2, color) {
+    constructor(word, x1, y1, x2, y2, color, canvas) {
 
         this.word = word;
         this.x1 = x1;
@@ -569,6 +610,8 @@ class Word {
         this.x2 = x2;
         this.y2 = y2;
         this.color = color;
+        this.canvas = canvas
+        this.context = canvas.getContext("2d");
 
     }
 
@@ -580,32 +623,24 @@ class Word {
         let fontSize = Math.floor((this.y2 - this.y1) * 0.75);
         const fontFormat = "px Segoe UI Light";
 
-        ctx.font = "" + fontSize + fontFormat;
-        ctx.fillStyle = this.color;
-        ctx.textAlign = "center";
+        this.context.font = "" + fontSize + fontFormat;
+        this.context.fillStyle = this.color;
+        this.context.textAlign = "center";
 
-        let metrics = ctx.measureText(this.word);
+        let metrics = this.context.measureText(this.word);
         let textWidth = metrics.width;
 
         while (textWidth > this.x2 - this.x1) {
 
             fontSize -= 1
-            ctx.font = "" + fontSize + fontFormat;
+            this.context.font = "" + fontSize + fontFormat;
 
-            metrics = ctx.measureText(this.word);
+            metrics = this.context.measureText(this.word);
             textWidth = metrics.width;
 
         }
 
-        ctx.fillText(this.word, center_x, base_y);
+        this.context.fillText(this.word, center_x, base_y);
 
     }
 }
-
-function animate() {
-    requestAnimationFrame(animate);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    display();
-}
-
-animate();
