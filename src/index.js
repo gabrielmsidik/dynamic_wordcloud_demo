@@ -1,4 +1,4 @@
-import "./styles.css";
+// import "./styles.css";
 import { DynamicWordCloud } from "dynamic_wordcloud";
 const ENTER_KEY_CODE = 13
 
