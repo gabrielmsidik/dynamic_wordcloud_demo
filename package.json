@@ -9,17 +9,18 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gabrielmsidik/dynamic_wordcloud.git"
+    "url": "git+https://github.com/gabrielmsidik/dynamic_wordcloud_demo.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/gabrielmsidik/dynamic_wordcloud/issues"
+    "url": "https://github.com/gabrielmsidik/dynamic_wordcloud_demo/issues"
   },
-  "homepage": "https://github.com/gabrielmsidik/dynamic_wordcloud#readme",
+  "homepage": "https://gabrielmsidik.github.io/dynamic_wordcloud_demo",
   "devDependencies": {
     "css-loader": "^3.5.3",
+    "gh-pages": "^2.2.0",
     "style-loader": "^1.2.1",
     "webpack": "^4.43.0",
     "webpack-cli": "^3.3.11",
